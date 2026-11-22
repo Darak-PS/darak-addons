@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.57
+Remote access now works on newly set up homes: the add-on trusts the address range Home Assistant actually sees its connections from. Before this, a new home answered every remote request with "400 Bad Request".
+
 ## 0.1.56
 Remote access now turns on with Home Assistant 2026.11 and later, which store the add-on's trusted address in a new form; a failed earlier attempt no longer blocks a retry.
 

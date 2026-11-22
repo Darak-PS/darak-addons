@@ -7,7 +7,12 @@ from pathlib import Path
 from .enrollment import write_private_json
 from .supervisor import UpstreamError
 
-SUPERVISOR_PROXY = "172.30.32.2"
+# The Supervisor gives each add-on a dynamic address from this range, and the
+# agent's forwarded traffic reaches Home Assistant from that address.
+AGENT_PROXY = "172.30.33.0/24"
+# Agents 0.1.25-0.1.56 trusted the Supervisor's own address instead, which never
+# carries the agent's traffic; older agents trusted the whole Supervisor network.
+PREVIOUS_AGENT_PROXY = "172.30.32.2/32"
 LEGACY_SUPERVISOR_PROXY = "172.30.32.0/23"
 _META_KEYS = ("created_at", "error", "error_message")
 
@@ -56,9 +61,9 @@ async def http_configure(client, params=None):
     original_proxies = list(proxies)
     added_proxy = not any(_contains_agent(proxy) for proxy in original_proxies)
     proxies = [proxy for proxy in original_proxies
-               if not (_agent_proxy_network(proxy) and not _contains_agent(proxy))]
+               if not (_agent_proxy_network(proxy) and not _contains_agent(proxy)) and not _is_previous_proxy(proxy)]
     if added_proxy:
-        proxies.append(SUPERVISOR_PROXY)
+        proxies.append(AGENT_PROXY)
     if proxies or "trusted_proxies" in merged:
         merged["trusted_proxies"] = proxies
     original_path = Path(client.http_original_path)
@@ -68,37 +73,40 @@ async def http_configure(client, params=None):
             "use_x_forwarded_for": (stable or {}).get("use_x_forwarded_for"),
             "added_trusted_proxy": added_proxy,
         }
-        if original_proxies != proxies and any(_agent_proxy_network(proxy) and not _contains_agent(proxy)
-                                               for proxy in original_proxies):
+        if any(proxy not in proxies for proxy in original_proxies):
             original["trusted_proxies"] = original_proxies
         write_private_json(original_path, original)
     await client.admin_ws([{"type": "http/config/configure", "config": merged}])
     return {"status": "staged"}
 
 
-def _contains_agent(proxy):
-    """The agent's own address; Home Assistant 2026.11 stores it as `172.30.32.2/32`."""
+def _same_network(proxy, network):
     try:
-        network = ipaddress.ip_network(proxy, strict=False)
+        return ipaddress.ip_network(proxy, strict=False) == ipaddress.ip_network(network)
     except (ValueError, TypeError):
         return False
-    return network.num_addresses == 1 and network.network_address == ipaddress.ip_address(SUPERVISOR_PROXY)
+
+
+def _contains_agent(proxy):
+    return _same_network(proxy, AGENT_PROXY)
+
+
+def _is_previous_proxy(proxy):
+    return _same_network(proxy, PREVIOUS_AGENT_PROXY)
 
 
 def _is_legacy_proxy(proxy):
-    try:
-        return ipaddress.ip_network(proxy, strict=False) == ipaddress.ip_network(LEGACY_SUPERVISOR_PROXY)
-    except (ValueError, TypeError):
-        return False
+    return _same_network(proxy, LEGACY_SUPERVISOR_PROXY)
 
 
 def _is_managed_proxy(proxy):
-    return _contains_agent(proxy) or _is_legacy_proxy(proxy)
+    return _contains_agent(proxy) or _is_previous_proxy(proxy) or _is_legacy_proxy(proxy)
 
 
 def _agent_proxy_network(proxy):
+    """True for the agent range and any wider network around it."""
     try:
-        return ipaddress.ip_address(SUPERVISOR_PROXY) in ipaddress.ip_network(proxy, strict=False)
+        return ipaddress.ip_network(AGENT_PROXY).subnet_of(ipaddress.ip_network(proxy, strict=False))
     except (ValueError, TypeError):
         return False
 
@@ -137,8 +145,7 @@ async def http_restore(client, params=None):
             if not _is_managed_proxy(proxy) and proxy not in proxies:
                 proxies.append(proxy)
     elif original is None or original.get("added_trusted_proxy") is True:
-        managed = _is_legacy_proxy if any(_is_legacy_proxy(proxy) for proxy in proxies) else _contains_agent
-        proxies = [proxy for proxy in proxies if not managed(proxy)]
+        proxies = [proxy for proxy in proxies if not _is_managed_proxy(proxy)]
     if proxies or "trusted_proxies" in merged:
         merged["trusted_proxies"] = proxies
     if original is not None:
