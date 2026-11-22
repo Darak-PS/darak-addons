@@ -1,0 +1,12 @@
+{
+  "domain": "darak_oauth",
+  "name": "Darak Account Linking",
+  "version": "2.0.1",
+  "config_flow": true,
+  "integration_type": "system",
+  "iot_class": "calculated",
+  "documentation": "https://darak.ps",
+  "codeowners": [],
+  "requirements": [],
+  "dependencies": []
+}

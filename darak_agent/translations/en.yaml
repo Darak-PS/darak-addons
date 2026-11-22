@@ -1,0 +1,7 @@
+configuration:
+  enrollment_bundle:
+    name: Enrollment bundle
+    description: One-time code from Darak. It clears itself after the agent joins.
+  support_sessions:
+    name: Support sessions
+    description: "allow: Darak technicians can open a time-limited session, and you are notified. ask: each session waits for your approval in the Darak support page. block: no support sessions."
