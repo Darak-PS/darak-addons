@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Darak account linking",
+        "description": "Use Darak's Google OAuth client, callback URL and token service.",
+        "data": {
+          "google_client_id": "Google client ID",
+          "redirect_uri": "Darak redirect URI",
+          "token_url": "Darak token URL",
+          "darak_key": "Home key"
+        }
+      }
+    },
+    "error": {
+      "invalid_client_id": "Enter a valid Google OAuth client ID.",
+      "invalid_redirect_uri": "Enter a valid Darak callback URL.",
+      "invalid_token_url": "Enter a valid Darak token URL.",
+      "invalid_key": "Enter a valid home key."
+    },
+    "abort": {
+      "already_configured": "Darak account linking is already configured."
+    }
+  }
+}

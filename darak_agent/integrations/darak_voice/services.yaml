@@ -1,0 +1,26 @@
+try_phrase:
+  name: Try a phrase
+  description: Preview text or spoken audio without executing it.
+  fields:
+    text:
+      name: Phrase
+      description: Text phrase to preview. Provide this or audio.
+      required: false
+      selector:
+        text:
+    audio:
+      name: Audio
+      description: Base64 16 kHz mono 16-bit PCM, 0.3–8 seconds. Provide this or text.
+      required: false
+      selector:
+        text:
+          multiline: true
+    language:
+      name: Language
+      description: Language used for the preview.
+      default: ar
+      selector:
+        select:
+          options:
+            - ar
+            - en

@@ -1,0 +1,7 @@
+configuration:
+  enrollment_bundle:
+    name: حزمة التسجيل
+    description: رمز لمرة واحدة من دارَك، يُمسح تلقائياً بعد انضمام الوكيل.
+  support_sessions:
+    name: جلسات الدعم
+    description: "allow: يستطيع فنيو دارَك فتح جلسة محدودة المدة مع إشعارك. ask: كل جلسة تنتظر موافقتك في صفحة دعم دارَك. block: لا جلسات دعم."

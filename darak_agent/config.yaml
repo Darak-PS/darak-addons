@@ -1,0 +1,34 @@
+name: Darak Agent
+version: "0.1.55"
+slug: darak_agent
+description: Secure remote management by Darak
+url: https://darak.ps
+arch: [aarch64, amd64]
+init: false
+startup: services
+boot: auto
+hassio_api: true
+# manager is assumed; host reboot and OS updates may need admin. Prove this on hardware.
+hassio_role: manager
+homeassistant_api: true
+ingress: true
+ingress_port: 8098
+panel_icon: mdi:account-wrench
+panel_title: Darak support
+map:
+  - type: homeassistant_config
+    read_only: false
+# Secrets that must not travel inside the customer's own full backups; after a restore the hub is enrolled again.
+# Patterns are matched against the path inside the backup ("data/...").
+backup_exclude:
+  - "darak.json"
+  - "darak-user.json"
+  - "managed-users.json"
+  - "tailscale"
+  - "tailscale/*"
+options:
+  enrollment_bundle: ""
+  support_sessions: allow
+schema:
+  enrollment_bundle: "password?"
+  support_sessions: "list(allow|ask|block)"
