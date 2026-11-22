@@ -33,6 +33,11 @@ async def _config(client):
                    for key in ("stable", "pending"))
             or not isinstance(result.get("active_config_type"), str)):
         raise UpstreamError()
+    pending = result.get("pending")
+    if pending is not None and pending.get("error") is not None:
+        # A pending config that failed its trial is never applied again; it only
+        # records the failure, so callers treat the slot as empty and may stage anew.
+        result = {**result, "pending": None}
     return result
 
 
@@ -72,10 +77,23 @@ async def http_configure(client, params=None):
 
 
 def _contains_agent(proxy):
+    """The agent's own address; Home Assistant 2026.11 stores it as `172.30.32.2/32`."""
     try:
-        return ipaddress.ip_address(proxy) == ipaddress.ip_address(SUPERVISOR_PROXY)
+        network = ipaddress.ip_network(proxy, strict=False)
     except (ValueError, TypeError):
         return False
+    return network.num_addresses == 1 and network.network_address == ipaddress.ip_address(SUPERVISOR_PROXY)
+
+
+def _is_legacy_proxy(proxy):
+    try:
+        return ipaddress.ip_network(proxy, strict=False) == ipaddress.ip_network(LEGACY_SUPERVISOR_PROXY)
+    except (ValueError, TypeError):
+        return False
+
+
+def _is_managed_proxy(proxy):
+    return _contains_agent(proxy) or _is_legacy_proxy(proxy)
 
 
 def _agent_proxy_network(proxy):
@@ -105,8 +123,7 @@ async def http_restore(client, params=None):
         raise UpstreamError()
     stable_proxies = stable.get("trusted_proxies", []) if isinstance(stable, dict) else []
     managed_proxy_present = (isinstance(stable_proxies, list)
-                             and any(proxy in (SUPERVISOR_PROXY, LEGACY_SUPERVISOR_PROXY)
-                                     for proxy in stable_proxies))
+                             and any(_is_managed_proxy(proxy) for proxy in stable_proxies))
     has_saved_proxies = original is not None and "trusted_proxies" in original
     if not managed_proxy_present and not has_saved_proxies:
         return {"status": "unchanged"}
@@ -117,11 +134,11 @@ async def http_restore(client, params=None):
     if has_saved_proxies:
         proxies = list(original["trusted_proxies"])
         for proxy in stable_proxies:
-            if proxy not in (SUPERVISOR_PROXY, LEGACY_SUPERVISOR_PROXY) and proxy not in proxies:
+            if not _is_managed_proxy(proxy) and proxy not in proxies:
                 proxies.append(proxy)
     elif original is None or original.get("added_trusted_proxy") is True:
-        agent_proxy = LEGACY_SUPERVISOR_PROXY if LEGACY_SUPERVISOR_PROXY in proxies else SUPERVISOR_PROXY
-        proxies = [proxy for proxy in proxies if proxy != agent_proxy]
+        managed = _is_legacy_proxy if any(_is_legacy_proxy(proxy) for proxy in proxies) else _contains_agent
+        proxies = [proxy for proxy in proxies if not managed(proxy)]
     if proxies or "trusted_proxies" in merged:
         merged["trusted_proxies"] = proxies
     if original is not None:

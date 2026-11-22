@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.56
+Remote access now turns on with Home Assistant 2026.11 and later, which store the add-on's trusted address in a new form; a failed earlier attempt no longer blocks a retry.
+
 ## 0.1.55
 The add-on can join Darak's own tailnet server (tailnet.darak.ps) when its enrollment bundle names one; older bundles keep working as before.
 

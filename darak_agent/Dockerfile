@@ -5,7 +5,7 @@ ARG BUILD_ARCH
 
 LABEL io.hass.type="addon" \
       io.hass.arch="${BUILD_ARCH}" \
-      io.hass.version="0.1.55"
+      io.hass.version="0.1.56"
 
 RUN apk add --no-cache curl \
  && case "$BUILD_ARCH" in \
